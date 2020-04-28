@@ -1,2 +1,2 @@
 # RMI Bully + Mutual Exclusion
-Bully election algorithm and mutual exclusion in a distributed system using Java RMI
+Bully coordinator election algorithm and mutual exclusion to use a resource in a distributed system using Java RMI
