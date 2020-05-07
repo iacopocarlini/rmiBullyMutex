@@ -47,7 +47,7 @@ public class Node
 	private List<Mutex> resourceRequests;
 	private static final int USAGE_DURATION = 4000;
 	
-	// probabilità
+	// probabilitï¿½
 	private static final int H = 2;
 	private static final int K = 90;
 	
@@ -106,7 +106,7 @@ public class Node
 	}
 	
 
-	
+	//metodo per creare o ottenere un registro invocato da ogni nodo
 	private Registry registryInitialization() throws RemoteException
 	{
 		Registry reg = null;
@@ -125,6 +125,7 @@ public class Node
 		return reg;
 	}
 	
+	//metodo che permette al nodo di registrarsi come "MUTEX"->M e come "ELECTION"->E sul registro  
 	private void register() throws RemoteException
 	{
 		try {
@@ -137,24 +138,24 @@ public class Node
 		}
 	}
 	
-	
+
 	/*
-	 A “running” node can move in a “failed” state with probability H. A “failed” node can move in the “running state” 
-	 with probability K. To simulate this behavior, a node flips repeatedly its “change state” coin with a random delay 
-	 between two successive flips. Of course, when a node moves to the “running” state, then it starts a new election. 
+	 *	un nodo running va in failure con probabiltÃ  H. 
+	 *	un nodo FAILED va in running con probabilitÃ  K.
+	 *	comportamento simulato con generatore di numeri casuali.
+	 *	Quando un nodo cambia stato comincia una nuova elezione
 	 */
 	private void liveOrDie() throws RemoteException, NotBoundException
 	{
 		int randomNumber = this.random.nextInt(100) + 1; // nel range [1, 100]
-		// int randomNumber = this.random.nextInt();
-		
+
 		switch(this.state)
 		{
 			case FAILED:
 				
-				if (randomNumber >= K) // ritorno in attività dalla failure
+				if (randomNumber >= K) // ritorno in attivitï¿½ dalla failure
 				{
-					System.out.println("++ Nodo " + Integer.toString(this.ID) + " è tornato in funzione, richiedo l'elezione"); //debug
+					System.out.println("++ Nodo " + Integer.toString(this.ID) + " ï¿½ tornato in funzione, richiedo l'elezione"); //debug
 					
 					for (Election el : getNodesList(this.ID))
 		              el.election(this.myElection);
@@ -178,7 +179,9 @@ public class Node
 		}
 	}
 
-	
+	/**
+	 * estrae un messaggio dalla coda ed esegue le varie azioni a seconda del tipo
+	 */
 	private void idle() 
 	{
 		try
@@ -208,7 +211,14 @@ public class Node
 	}
 	
 	
-	// ELECTION
+	/*
+	 * ELECTION
+	 *
+	 * getNodeList() ritorna tutti i nodi nel registro diversi dal chiamante
+	 *
+	 * bullyCandidates() ritorna i candidati per l'elezione secondo il criterio dell'ID piÃ¹ alto
+	 * 
+	 */
 	
 	private List<Election> getNodesList(final int id) throws RemoteException, NotBoundException
 	  {
@@ -238,20 +248,24 @@ public class Node
 	{
 		this.timeout = 0;
 
+		//se trovo un nodo con l'ID piÃ¹ alto allora mi metto in IDLE
 	    if (m.getElectionRmObj().getNodeID() > this.ID)
-	      this.state = State.IDLE;
-	    
-	    else // candidato per il bully
+		  this.state = State.IDLE;
+		  
+	    // altrimenti sono un candidato per il bully
+	    else 
 	    {
 	      this.state = State.CANDIDATE;
 	      ((Election) m.getElectionRmObj()).ok(this.myElection);
-	      
+		  
+		  // debug
 	      System.out.println("Nodo " + Integer.toString(this.ID) 
 	      					+ ": Sono candidato, mando ok a " 
-      						+ Integer.toString(m.getElectionRmObj().getNodeID())); // debug
+      						+ Integer.toString(m.getElectionRmObj().getNodeID())); 
 	    }
 	}
 	
+	//se ricevo ok mi metto in IDLE
 	private void receiveOK(final Message m) throws RemoteException
 	{
 	    this.timeout = 0;
@@ -285,6 +299,7 @@ public class Node
 	    
 	}
 
+
 	private void candidate() throws RemoteException, NotBoundException
 	{
 		Message extractedMessage = this.messageQueue.poll();
@@ -292,17 +307,19 @@ public class Node
 	    if (extractedMessage == null)
 	    {
 	      this.timeout++;
-	      
+		  
+		  //se supero la soglia allora mi permetto di essere il coordinatore
 	      if (this.timeout > CANDIDATE_TIMEOUT)
 	      {
 	        this.state = State.COORDINATOR;
-	        
+	        //da nuovo coordinatore faccio pulizia di richieste,messaggi...
 	        this.messageQueue.clear();
 	        this.resourceRequests.clear();
 	        this.timeout = 0;
-	        this.resourceUser = null;
-	        
-	        System.out.println("Nodo " + Integer.toString(this.ID) + ": sono il coordinatore"); // debug
+			this.resourceUser = null;
+			
+	        // debug
+	        System.out.println("Nodo " + Integer.toString(this.ID) + ": sono il coordinatore"); 
 	        
 	        for (Election e : getNodesList(this.ID))
 	          e.setCoordinator(this.myMutex);
@@ -334,9 +351,7 @@ public class Node
 	}
 	
 	
-	
 	// MUTEX
-	
 	private void manageResource()
 	{
 		try
@@ -367,9 +382,10 @@ public class Node
 							
 				            else // risorsa libera ma nessuno in attesa di usarla
 				            {
+							// debug
 				              this.resourceUser = null;
 				              System.out.println("Nodo " + Integer.toString(this.ID) 
-				              					 + ": la risorsa è libera, nessuno è in attesa "); // debug
+				              					 + ": la risorsa ï¿½ libera, nessuno ï¿½ in attesa "); 
 				            }
 							
 							break;
@@ -386,7 +402,6 @@ public class Node
 				              System.out.println("Nodo " + Integer.toString(this.ID) 
 					           					 + ": failure dell'utilizzatore, riassegno la risorsa "); // debug
 				            }
-							
 				            else
 				              this.resourceRequests.add(extractedMessage.getMutexRmObj());
 							
@@ -396,10 +411,8 @@ public class Node
 							break;
 					}
 	    	  }
-	    	  
 		      else
-		      {
-			    	
+		      {		    	
 				switch(t)
 				{
 					case ELECTION:
@@ -421,9 +434,8 @@ public class Node
 						break;
 				}
 		      }	      
-	      }
-
-	    }
+	        }
+		}
 	    catch (Exception e) { e.printStackTrace(); }
 	}
 	
@@ -451,12 +463,15 @@ public class Node
 	        if (this.timeout > MAX_WAIT)
 	        {
 	        	
-	          this.state = State.CANDIDATE;
+			  this.state = State.CANDIDATE;
+
+			  // debug
+			  System.out.println("Nodo " + Integer.toString(this.ID) + ": failure del coordinatore, parte l'elezione"); 
 
 	          for (Election e : bullyCandidates(this.ID))
 	            e.election(this.myElection);
 	          
-	          System.out.println("Nodo " + Integer.toString(this.ID) + ": failure del coordinatore, parte l'elezione"); // debug
+
 	        }
 	      }
 	      
@@ -513,7 +528,7 @@ public class Node
 	}
 
 	
-	// Esecuzione
+	// Esecuzione 
 	public void run() throws RemoteException, NotBoundException
 	{
 		// 1) Inizializzazione
@@ -525,7 +540,7 @@ public class Node
 		{
 			switch (this.state)
 		      {
-				  // RUNNING
+				  // stati che indentificano un processo in RUNNING
 				  case IDLE:
 				      idle();
 				      break;
@@ -550,7 +565,7 @@ public class Node
 				case FAILED: 
 					try
 					{ 
-						// a node flips repeatedly its “change state” coin with a random delay between two successive flips
+						//attesa utile ai fini di debug
 						Thread.sleep(MIN + this.random.nextInt(DURATION));
 					} catch (Exception e) { e.printStackTrace(); }
 					break;
@@ -560,11 +575,7 @@ public class Node
 		      }
 			
 			liveOrDie();
-			
-			// fine while
 		}
-	
-	// fine run
 	}
 
 	
